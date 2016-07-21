@@ -144,7 +144,7 @@ namespace PokemonGo.RocketAPI.Console
             catch (UriFormatException ufe) { System.Console.WriteLine(ufe.StackTrace); System.Console.WriteLine("System URI Format Exception - Restarting"); Execute(); }
             catch (ArgumentOutOfRangeException aore) { System.Console.WriteLine(aore.StackTrace); System.Console.WriteLine("ArgumentOutOfRangeException - Restarting"); Execute(); }
             catch (NullReferenceException nre) { System.Console.WriteLine(nre.StackTrace); System.Console.WriteLine("Null Refference - Restarting"); Execute(); }
-
+            Execute();
             //await ExecuteCatchAllNearbyPokemons(client);
         }
 
