@@ -55,7 +55,7 @@ namespace PokemonGo.RocketAPI
             var customRequest = new Request.Types.CatchPokemonRequest
             {
                 EncounterId = encounterId,
-                Pokeball = (int) GetBestBall(pokemonCP).Result,
+                Pokeball = (int) pokeball,
                 SpawnPointGuid = spawnPointGuid,
                 HitPokemon = 1,
                 NormalizedReticleSize = Utils.FloatAsUlong(1.950),
@@ -137,50 +137,6 @@ namespace PokemonGo.RocketAPI
                         releasePokemonRequest);
         }
 
-        private async Task<MiscEnums.Item> GetBestBall(int? pokemonCP)
-        {
-            var inventory = await GetInventory();
-
-            var ballCollection = inventory.InventoryDelta.InventoryItems.Select(i => i.InventoryItemData?.Item)
-                .Where(p => p != null)
-                .GroupBy(i => (MiscEnums.Item) i.Item_)
-                .Select(kvp => new {ItemId = kvp.Key, Amount = kvp.Sum(x => x.Count)})
-                .Where(y => y.ItemId == MiscEnums.Item.ITEM_POKE_BALL
-                            || y.ItemId == MiscEnums.Item.ITEM_GREAT_BALL
-                            || y.ItemId == MiscEnums.Item.ITEM_ULTRA_BALL
-                            || y.ItemId == MiscEnums.Item.ITEM_MASTER_BALL);
-
-            var pokeBallsCount = ballCollection.Where(p => p.ItemId == MiscEnums.Item.ITEM_POKE_BALL).
-                DefaultIfEmpty(new {ItemId = MiscEnums.Item.ITEM_POKE_BALL, Amount = 0}).FirstOrDefault().Amount;
-            var greatBallsCount = ballCollection.Where(p => p.ItemId == MiscEnums.Item.ITEM_GREAT_BALL).
-                DefaultIfEmpty(new {ItemId = MiscEnums.Item.ITEM_GREAT_BALL, Amount = 0}).FirstOrDefault().Amount;
-            var ultraBallsCount = ballCollection.Where(p => p.ItemId == MiscEnums.Item.ITEM_ULTRA_BALL).
-                DefaultIfEmpty(new {ItemId = MiscEnums.Item.ITEM_ULTRA_BALL, Amount = 0}).FirstOrDefault().Amount;
-            var masterBallsCount = ballCollection.Where(p => p.ItemId == MiscEnums.Item.ITEM_MASTER_BALL).
-                DefaultIfEmpty(new {ItemId = MiscEnums.Item.ITEM_MASTER_BALL, Amount = 0}).FirstOrDefault().Amount;
-
-            // Use better balls for high CP pokemon
-            if (masterBallsCount > 0 && pokemonCP >= 1000)
-                return MiscEnums.Item.ITEM_MASTER_BALL;
-
-            if (ultraBallsCount > 0 && pokemonCP >= 600)
-                return MiscEnums.Item.ITEM_ULTRA_BALL;
-
-            if (greatBallsCount > 0 && pokemonCP >= 350)
-                return MiscEnums.Item.ITEM_GREAT_BALL;
-
-            // If low CP pokemon, but no more pokeballs; only use better balls if pokemon are of semi-worthy quality
-            if (pokeBallsCount > 0)
-                return MiscEnums.Item.ITEM_POKE_BALL;
-            else if ((greatBallsCount < 40 && greatBallsCount > 0 && pokemonCP >= 200) || greatBallsCount >= 40)
-                return MiscEnums.Item.ITEM_GREAT_BALL;
-            else if (ultraBallsCount > 0 && pokemonCP >= 500)
-                return MiscEnums.Item.ITEM_ULTRA_BALL;
-            else if (masterBallsCount > 0 && pokemonCP >= 700)
-                return MiscEnums.Item.ITEM_MASTER_BALL;
-
-            return MiscEnums.Item.ITEM_POKE_BALL;
-        }
 
         public async Task<FortDetailsResponse> GetFort(string fortId, double fortLat, double fortLng)
         {

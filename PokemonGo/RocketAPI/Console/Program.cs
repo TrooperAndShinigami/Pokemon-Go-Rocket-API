@@ -140,10 +140,10 @@ namespace PokemonGo.RocketAPI.Console
 
                 await ExecuteFarmingPokestopsAndPokemons(client);
             }
-            catch (TaskCanceledException tce) { System.Console.WriteLine("Task Canceled Exception - Restarting"); Execute(); }
-            catch (UriFormatException ufe) { System.Console.WriteLine("System URI Format Exception - Restarting"); Execute(); }
-            catch (ArgumentOutOfRangeException aore) { System.Console.WriteLine("ArgumentOutOfRangeException - Restarting"); Execute(); }
-            catch (NullReferenceException nre) { System.Console.WriteLine("Null Refference - Restarting"); Execute(); }
+            catch (TaskCanceledException tce) { System.Console.WriteLine(tce.StackTrace); System.Console.WriteLine("Task Canceled Exception - Restarting"); Execute(); }
+            catch (UriFormatException ufe) { System.Console.WriteLine(ufe.StackTrace); System.Console.WriteLine("System URI Format Exception - Restarting"); Execute(); }
+            catch (ArgumentOutOfRangeException aore) { System.Console.WriteLine(aore.StackTrace); System.Console.WriteLine("ArgumentOutOfRangeException - Restarting"); Execute(); }
+            catch (NullReferenceException nre) { System.Console.WriteLine(nre.StackTrace); System.Console.WriteLine("Null Refference - Restarting"); Execute(); }
 
             //await ExecuteCatchAllNearbyPokemons(client);
         }
@@ -153,7 +153,7 @@ namespace PokemonGo.RocketAPI.Console
             var inventory = await client.GetInventory();
             var pokemons =
                     inventory.InventoryDelta.InventoryItems.Select(i => i.InventoryItemData?.Pokemon)
-                        .Where(p => p != null && p?.PokemonId > 0);
+                        .Where(p => p != null && p?.PokemonId > 0).OrderByDescending(p => p.Cp);
 
             if (ClientSettings.EvolveAllGivenPokemons)
                 await EvolveAllGivenPokemons(client, pokemons);
@@ -182,18 +182,20 @@ namespace PokemonGo.RocketAPI.Console
                 var update = await client.UpdatePlayerLocation(pokemon.Latitude, pokemon.Longitude);
                 var encounterPokemonResponse = await client.EncounterPokemon(pokemon.EncounterId, pokemon.SpawnpointId);
                 var pokemonCP = encounterPokemonResponse?.WildPokemon?.PokemonData?.Cp;
+                var ballToUse = await GetBestBall(client, pokemonCP);
                 CatchPokemonResponse caughtPokemonResponse;
                 do
                 {
+                    
                     caughtPokemonResponse =
                         await
                             client.CatchPokemon(pokemon.EncounterId, pokemon.SpawnpointId, pokemon.Latitude,
-                                pokemon.Longitude, MiscEnums.Item.ITEM_POKE_BALL, pokemonCP);
+                                pokemon.Longitude, ballToUse, pokemonCP);
                     ; //note: reverted from settings because this should not be part of settings but part of logic
                 } while (caughtPokemonResponse.Status == CatchPokemonResponse.Types.CatchStatus.CatchMissed);
                 System.Console.WriteLine(caughtPokemonResponse.Status ==
                                          CatchPokemonResponse.Types.CatchStatus.CatchSuccess
-                    ? $"[{DateTime.Now.ToString("HH:mm:ss")}] We caught a {pokemon.PokemonId} with CP {pokemonCP}"
+                    ? $"[{DateTime.Now.ToString("HH:mm:ss")}] We caught a {pokemon.PokemonId} with CP {pokemonCP} using {ballToUse}"
                     : $"[{DateTime.Now.ToString("HH:mm:ss")}] {pokemon.PokemonId} with CP {pokemonCP} got away..");
 
                 await Task.Delay(3500);
@@ -424,6 +426,51 @@ namespace PokemonGo.RocketAPI.Console
             }
 
             //System.Console.WriteLine("[!] finished grinding all the meat");
+        }
+
+        private static async Task<MiscEnums.Item> GetBestBall(Client client, int? pokemonCP)
+        {
+            var inventory = await client.GetInventory();
+
+            var ballCollection = inventory.InventoryDelta.InventoryItems.Select(i => i.InventoryItemData?.Item)
+                .Where(p => p != null)
+                .GroupBy(i => (MiscEnums.Item)i.Item_)
+                .Select(kvp => new { ItemId = kvp.Key, Amount = kvp.Sum(x => x.Count) })
+                .Where(y => y.ItemId == MiscEnums.Item.ITEM_POKE_BALL
+                            || y.ItemId == MiscEnums.Item.ITEM_GREAT_BALL
+                            || y.ItemId == MiscEnums.Item.ITEM_ULTRA_BALL
+                            || y.ItemId == MiscEnums.Item.ITEM_MASTER_BALL);
+
+            var pokeBallsCount = ballCollection.Where(p => p.ItemId == MiscEnums.Item.ITEM_POKE_BALL).
+                DefaultIfEmpty(new { ItemId = MiscEnums.Item.ITEM_POKE_BALL, Amount = 0 }).FirstOrDefault().Amount;
+            var greatBallsCount = ballCollection.Where(p => p.ItemId == MiscEnums.Item.ITEM_GREAT_BALL).
+                DefaultIfEmpty(new { ItemId = MiscEnums.Item.ITEM_GREAT_BALL, Amount = 0 }).FirstOrDefault().Amount;
+            var ultraBallsCount = ballCollection.Where(p => p.ItemId == MiscEnums.Item.ITEM_ULTRA_BALL).
+                DefaultIfEmpty(new { ItemId = MiscEnums.Item.ITEM_ULTRA_BALL, Amount = 0 }).FirstOrDefault().Amount;
+            var masterBallsCount = ballCollection.Where(p => p.ItemId == MiscEnums.Item.ITEM_MASTER_BALL).
+                DefaultIfEmpty(new { ItemId = MiscEnums.Item.ITEM_MASTER_BALL, Amount = 0 }).FirstOrDefault().Amount;
+
+            // Use better balls for high CP pokemon
+            if (masterBallsCount > 0 && pokemonCP >= 1000)
+                return MiscEnums.Item.ITEM_MASTER_BALL;
+
+            if (ultraBallsCount > 0 && pokemonCP >= 600)
+                return MiscEnums.Item.ITEM_ULTRA_BALL;
+
+            if (greatBallsCount > 0 && pokemonCP >= 350)
+                return MiscEnums.Item.ITEM_GREAT_BALL;
+
+            // If low CP pokemon, but no more pokeballs; only use better balls if pokemon are of semi-worthy quality
+            if (pokeBallsCount > 0)
+                return MiscEnums.Item.ITEM_POKE_BALL;
+            else if ((greatBallsCount < 40 && greatBallsCount > 0 && pokemonCP >= 200) || greatBallsCount >= 40)
+                return MiscEnums.Item.ITEM_GREAT_BALL;
+            else if (ultraBallsCount > 0 && pokemonCP >= 500)
+                return MiscEnums.Item.ITEM_ULTRA_BALL;
+            else if (masterBallsCount > 0 && pokemonCP >= 700)
+                return MiscEnums.Item.ITEM_MASTER_BALL;
+
+            return MiscEnums.Item.ITEM_POKE_BALL;
         }
     }
 }
