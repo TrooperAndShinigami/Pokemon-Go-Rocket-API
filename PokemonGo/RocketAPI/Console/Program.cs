@@ -202,7 +202,6 @@ namespace PokemonGo.RocketAPI.Console
 
         private static async Task ExecuteFarmingPokestopsAndPokemons(Client client)
         {
-            int counter = 0;
             var mapObjects = await client.GetMapObjects();
 
             var pokeStops =
@@ -266,7 +265,7 @@ namespace PokemonGo.RocketAPI.Console
 
         private static async Task TransferAllButStrongestUnwantedPokemon(Client client)
         {
-            System.Console.WriteLine("[!] firing up the meat grinder");
+            //System.Console.WriteLine("[!] firing up the meat grinder");
 
             var unwantedPokemonTypes = new[]
             {
@@ -313,7 +312,7 @@ namespace PokemonGo.RocketAPI.Console
                 }
             }
 
-            System.Console.WriteLine("[!] finished grinding all the meat");
+            //System.Console.WriteLine("[!] finished grinding all the meat");
         }
 
         private static async Task TransferAllGivenPokemons(Client client, IEnumerable<PokemonData> unwantedPokemons)
@@ -353,7 +352,7 @@ namespace PokemonGo.RocketAPI.Console
             if (checkForDuplicates%2 == 0)
             {
                 checkForDuplicates = 0;
-                System.Console.WriteLine($"Check for duplicates");
+                //System.Console.WriteLine($"Check for duplicates");
                 var inventory = await client.GetInventory();
                 var allpokemons =
                     inventory.InventoryDelta.InventoryItems.Select(i => i.InventoryItemData?.Pokemon)
@@ -378,7 +377,7 @@ namespace PokemonGo.RocketAPI.Console
 
         private static async Task TransferAllWeakPokemon(Client client, int cpThreshold)
         {
-            System.Console.WriteLine("[!] firing up the meat grinder");
+            //System.Console.WriteLine("[!] firing up the meat grinder");
 
             var doNotTransfer = new[] //these will not be transferred even when below the CP threshold
             {
@@ -424,7 +423,7 @@ namespace PokemonGo.RocketAPI.Console
                 }
             }
 
-            System.Console.WriteLine("[!] finished grinding all the meat");
+            //System.Console.WriteLine("[!] finished grinding all the meat");
         }
     }
 }
