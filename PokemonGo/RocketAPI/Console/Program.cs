@@ -51,9 +51,10 @@ namespace PokemonGo.RocketAPI.Console
                 }
                 ;
 
-                System.Console.WriteLine("There is a new Version available: " + gitVersion + " downloading.. ");
+                System.Console.WriteLine("There is a new Version available: " + gitVersion);
+                System.Console.WriteLine("If you have any issues, go get it now.");
                 Thread.Sleep(1000);
-                Process.Start("https://github.com/NecronomiconCoding/Pokemon-Go-Rocket-API");
+                //Process.Start("https://github.com/NecronomiconCoding/Pokemon-Go-Rocket-API");
             }
             catch (Exception)
             {
@@ -136,23 +137,6 @@ namespace PokemonGo.RocketAPI.Console
                 var settings = await client.GetSettings();
                 var mapObjects = await client.GetMapObjects();
                 var inventory = await client.GetInventory();
-                var pokemons =
-                    inventory.InventoryDelta.InventoryItems.Select(i => i.InventoryItemData?.Pokemon)
-                        .Where(p => p != null && p?.PokemonId > 0);
-
-                if (ClientSettings.TransferType == "leaveStrongest")
-                    await TransferAllButStrongestUnwantedPokemon(client);
-                else if (ClientSettings.TransferType == "all")
-                    await TransferAllGivenPokemons(client, pokemons);
-                else if (ClientSettings.TransferType == "duplicate")
-                    await TransferDuplicatePokemon(client);
-                else if (ClientSettings.TransferType == "cp")
-                    await TransferAllWeakPokemon(client, ClientSettings.TransferCPThreshold);
-                else
-                    System.Console.WriteLine("Transfering pokemon disabled");
-                if (ClientSettings.EvolveAllGivenPokemons)
-                    await EvolveAllGivenPokemons(client, pokemons);
-
 
                 await ExecuteFarmingPokestopsAndPokemons(client);
             }
@@ -162,6 +146,27 @@ namespace PokemonGo.RocketAPI.Console
             catch (NullReferenceException nre) { System.Console.WriteLine("Null Refference - Restarting"); Execute(); }
 
             //await ExecuteCatchAllNearbyPokemons(client);
+        }
+
+        private static async Task EvolveAndTransfer(Client client)
+        {
+            var inventory = await client.GetInventory();
+            var pokemons =
+                    inventory.InventoryDelta.InventoryItems.Select(i => i.InventoryItemData?.Pokemon)
+                        .Where(p => p != null && p?.PokemonId > 0);
+
+            if (ClientSettings.TransferType == "leaveStrongest")
+                await TransferAllButStrongestUnwantedPokemon(client);
+            else if (ClientSettings.TransferType == "all")
+                await TransferAllGivenPokemons(client, pokemons);
+            else if (ClientSettings.TransferType == "duplicate")
+                await TransferDuplicatePokemon(client);
+            else if (ClientSettings.TransferType == "cp")
+                await TransferAllWeakPokemon(client, ClientSettings.TransferCPThreshold);
+            else
+                System.Console.WriteLine("Transfering pokemon disabled");
+            if (ClientSettings.EvolveAllGivenPokemons)
+                await EvolveAllGivenPokemons(client, pokemons);
         }
 
         private static async Task ExecuteCatchAllNearbyPokemons(Client client)
@@ -188,15 +193,13 @@ namespace PokemonGo.RocketAPI.Console
                     ? $"[{DateTime.Now.ToString("HH:mm:ss")}] We caught a {pokemon.PokemonId} with CP {encounterPokemonResponse?.WildPokemon?.PokemonData?.Cp}"
                     : $"[{DateTime.Now.ToString("HH:mm:ss")}] {pokemon.PokemonId} with CP {encounterPokemonResponse?.WildPokemon?.PokemonData?.Cp} got away..");
 
-                await Task.Delay(5000);
-
-
-                await Task.Delay(5000);
+                await Task.Delay(3500);
             }
         }
 
         private static async Task ExecuteFarmingPokestopsAndPokemons(Client client)
         {
+            int counter = 0;
             var mapObjects = await client.GetMapObjects();
 
             var pokeStops =
@@ -205,7 +208,7 @@ namespace PokemonGo.RocketAPI.Console
                         i =>
                             i.Type == FortType.Checkpoint &&
                             i.CooldownCompleteTimestampMs < DateTime.UtcNow.ToUnixTime());
-
+            System.Console.WriteLine(pokeStops.ToList().Count);
             foreach (var pokeStop in pokeStops)
             {
                 var update = await client.UpdatePlayerLocation(pokeStop.Latitude, pokeStop.Longitude);
@@ -215,8 +218,10 @@ namespace PokemonGo.RocketAPI.Console
                 System.Console.WriteLine(
                     $"[{DateTime.Now.ToString("HH:mm:ss")}] Farmed XP: {fortSearch.ExperienceAwarded}, Gems: {fortSearch.GemsAwarded}, Eggs: {fortSearch.PokemonDataEgg} Items: {GetFriendlyItemsString(fortSearch.ItemsAwarded)}");
 
-                await Task.Delay(15000);
+                await Task.Delay(4000);
                 await ExecuteCatchAllNearbyPokemons(client);
+                await Task.Delay(6000);
+                await EvolveAndTransfer(client);
             }
         }
 
@@ -340,7 +345,7 @@ namespace PokemonGo.RocketAPI.Console
         private static async Task TransferDuplicatePokemon(Client client)
         {
             checkForDuplicates++;
-            if (checkForDuplicates%50 == 0)
+            if (checkForDuplicates%2 == 0)
             {
                 checkForDuplicates = 0;
                 System.Console.WriteLine($"Check for duplicates");
