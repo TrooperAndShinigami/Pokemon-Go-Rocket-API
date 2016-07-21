@@ -211,6 +211,7 @@ namespace PokemonGo.RocketAPI.Console
             System.Console.WriteLine(pokeStops.ToList().Count);
             foreach (var pokeStop in pokeStops)
             {
+                //System.Console.WriteLine(++counter + " pokeStop");
                 var update = await client.UpdatePlayerLocation(pokeStop.Latitude, pokeStop.Longitude);
                 var fortInfo = await client.GetFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
                 var fortSearch = await client.SearchFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
