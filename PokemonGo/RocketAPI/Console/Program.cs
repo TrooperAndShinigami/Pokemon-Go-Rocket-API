@@ -122,38 +122,44 @@ namespace PokemonGo.RocketAPI.Console
 
         private static async void Execute()
         {
-            var client = new Client(ClientSettings);
+            try
+            {
+                var client = new Client(ClientSettings);
 
-            if (ClientSettings.AuthType == AuthType.Ptc)
-                await client.DoPtcLogin(ClientSettings.PtcUsername, ClientSettings.PtcPassword);
-            else if (ClientSettings.AuthType == AuthType.Google)
-                await client.DoGoogleLogin();
+                if (ClientSettings.AuthType == AuthType.Ptc)
+                    await client.DoPtcLogin(ClientSettings.PtcUsername, ClientSettings.PtcPassword);
+                else if (ClientSettings.AuthType == AuthType.Google)
+                    await client.DoGoogleLogin();
 
-            await client.SetServer();
-            var profile = await client.GetProfile();
-            var settings = await client.GetSettings();
-            var mapObjects = await client.GetMapObjects();
-            var inventory = await client.GetInventory();
-            var pokemons =
-                inventory.InventoryDelta.InventoryItems.Select(i => i.InventoryItemData?.Pokemon)
-                    .Where(p => p != null && p?.PokemonId > 0);
+                await client.SetServer();
+                var profile = await client.GetProfile();
+                var settings = await client.GetSettings();
+                var mapObjects = await client.GetMapObjects();
+                var inventory = await client.GetInventory();
+                var pokemons =
+                    inventory.InventoryDelta.InventoryItems.Select(i => i.InventoryItemData?.Pokemon)
+                        .Where(p => p != null && p?.PokemonId > 0);
 
-            if (ClientSettings.TransferType == "leaveStrongest")
-                await TransferAllButStrongestUnwantedPokemon(client);
-            else if (ClientSettings.TransferType == "all")
-                await TransferAllGivenPokemons(client, pokemons);
-            else if (ClientSettings.TransferType == "duplicate")
-                await TransferDuplicatePokemon(client);
-            else if (ClientSettings.TransferType == "cp")
-                await TransferAllWeakPokemon(client, ClientSettings.TransferCPThreshold);
-            else
-                System.Console.WriteLine("Transfering pokemon disabled");
-            if (ClientSettings.EvolveAllGivenPokemons)
-                await EvolveAllGivenPokemons(client, pokemons);
+                if (ClientSettings.TransferType == "leaveStrongest")
+                    await TransferAllButStrongestUnwantedPokemon(client);
+                else if (ClientSettings.TransferType == "all")
+                    await TransferAllGivenPokemons(client, pokemons);
+                else if (ClientSettings.TransferType == "duplicate")
+                    await TransferDuplicatePokemon(client);
+                else if (ClientSettings.TransferType == "cp")
+                    await TransferAllWeakPokemon(client, ClientSettings.TransferCPThreshold);
+                else
+                    System.Console.WriteLine("Transfering pokemon disabled");
+                if (ClientSettings.EvolveAllGivenPokemons)
+                    await EvolveAllGivenPokemons(client, pokemons);
 
 
-            await ExecuteFarmingPokestopsAndPokemons(client);
-
+                await ExecuteFarmingPokestopsAndPokemons(client);
+            }
+            catch (TaskCanceledException tce) { System.Console.WriteLine("Task Canceled Exception - Restarting"); Execute(); }
+            catch (UriFormatException ufe) { System.Console.WriteLine("System URI Format Exception - Restarting"); Execute(); }
+            catch (ArgumentOutOfRangeException aore) { System.Console.WriteLine("ArgumentOutOfRangeException - Restarting"); Execute(); }
+            catch (NullReferenceException nre) { System.Console.WriteLine("Null Refference - Restarting"); Execute(); }
 
             //await ExecuteCatchAllNearbyPokemons(client);
         }
