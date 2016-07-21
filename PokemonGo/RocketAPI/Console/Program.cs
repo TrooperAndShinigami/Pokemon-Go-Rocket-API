@@ -155,6 +155,9 @@ namespace PokemonGo.RocketAPI.Console
                     inventory.InventoryDelta.InventoryItems.Select(i => i.InventoryItemData?.Pokemon)
                         .Where(p => p != null && p?.PokemonId > 0);
 
+            if (ClientSettings.EvolveAllGivenPokemons)
+                await EvolveAllGivenPokemons(client, pokemons);
+
             if (ClientSettings.TransferType == "leaveStrongest")
                 await TransferAllButStrongestUnwantedPokemon(client);
             else if (ClientSettings.TransferType == "all")
@@ -165,8 +168,7 @@ namespace PokemonGo.RocketAPI.Console
                 await TransferAllWeakPokemon(client, ClientSettings.TransferCPThreshold);
             else
                 System.Console.WriteLine("Transfering pokemon disabled");
-            if (ClientSettings.EvolveAllGivenPokemons)
-                await EvolveAllGivenPokemons(client, pokemons);
+            
         }
 
         private static async Task ExecuteCatchAllNearbyPokemons(Client client)
