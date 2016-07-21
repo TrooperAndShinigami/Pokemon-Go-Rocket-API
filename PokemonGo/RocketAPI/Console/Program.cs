@@ -208,10 +208,9 @@ namespace PokemonGo.RocketAPI.Console
                         i =>
                             i.Type == FortType.Checkpoint &&
                             i.CooldownCompleteTimestampMs < DateTime.UtcNow.ToUnixTime());
-            System.Console.WriteLine(pokeStops.ToList().Count);
+
             foreach (var pokeStop in pokeStops)
             {
-                //System.Console.WriteLine(++counter + " pokeStop");
                 var update = await client.UpdatePlayerLocation(pokeStop.Latitude, pokeStop.Longitude);
                 var fortInfo = await client.GetFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
                 var fortSearch = await client.SearchFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
@@ -304,9 +303,11 @@ namespace PokemonGo.RocketAPI.Console
                 var unwantedPokemon =
                     pokemonOfDesiredType.Skip(1) // keep the strongest one for potential battle-evolving
                         .ToList();
-
-                System.Console.WriteLine($"Grinding {unwantedPokemon.Count} pokemons of type {unwantedPokemonType}");
-                await TransferAllGivenPokemons(client, unwantedPokemon);
+                if (unwantedPokemon.Count > 0)
+                {
+                    System.Console.WriteLine($"Grinding {unwantedPokemon.Count} pokemons of type {unwantedPokemonType}");
+                    await TransferAllGivenPokemons(client, unwantedPokemon);
+                }
             }
 
             System.Console.WriteLine("[!] finished grinding all the meat");
@@ -413,9 +414,11 @@ namespace PokemonGo.RocketAPI.Console
 
                 //var unwantedPokemon = pokemonOfDesiredType.Skip(1) // keep the strongest one for potential battle-evolving
                 //                                          .ToList();
-                System.Console.WriteLine($"Grinding {pokemonToDiscard.Count} pokemon below {cpThreshold} CP.");
-                await TransferAllGivenPokemons(client, pokemonToDiscard);
-
+                if (pokemonToDiscard.Count > 0)
+                {
+                    System.Console.WriteLine($"Grinding {pokemonToDiscard.Count} pokemon below {cpThreshold} CP.");
+                    await TransferAllGivenPokemons(client, pokemonToDiscard);
+                }
             }
 
             System.Console.WriteLine("[!] finished grinding all the meat");
