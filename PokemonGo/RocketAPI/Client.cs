@@ -172,7 +172,7 @@ namespace PokemonGo.RocketAPI
             // If low CP pokemon, but no more pokeballs; only use better balls if pokemon are of semi-worthy quality
             if (pokeBallsCount > 0)
                 return MiscEnums.Item.ITEM_POKE_BALL;
-            else if ((greatBallsCount < 40 && pokemonCP >= 200) || greatBallsCount >= 40)
+            else if ((greatBallsCount < 40 && greatBallsCount > 0 && pokemonCP >= 200) || greatBallsCount >= 40)
                 return MiscEnums.Item.ITEM_GREAT_BALL;
             else if (ultraBallsCount > 0 && pokemonCP >= 500)
                 return MiscEnums.Item.ITEM_ULTRA_BALL;
